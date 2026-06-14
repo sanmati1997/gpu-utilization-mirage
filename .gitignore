@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
+# generated outputs are reproducible; keep the repo clean of large/derived files
+assets/*.json
+assets/*.png
+!assets/.gitkeep

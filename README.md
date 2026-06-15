@@ -4,7 +4,7 @@
 
 [Research write-up](PAPER.md) · [Reproduce on a free Colab T4](#reproduce) · Built by [Sanmati Sawalwade](https://linkedin.com/in/sanmati-sawalwade)
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sanmati1997/gpu-utilization-mirage/blob/main/notebooks/gpu_utilization_mirage.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sanmati1997/gpu-utilization-vs-mfu/blob/main/notebooks/gpu_utilization_mirage.ipynb)
 
 ---
 
@@ -84,8 +84,8 @@ streamlit run panel/app.py
 
 ```python
 !nvidia-smi -L
-!git clone https://github.com/sanmati1997/gpu-utilization-mirage
-%cd gpu-utilization-mirage
+!git clone https://github.com/sanmati1997/gpu-utilization-vs-mfu
+%cd gpu-utilization-vs-mfu
 !pip -q install -r requirements.txt
 !python measure/train_loop.py --steps 200 --batch-size 8
 !python measure/sweep.py --mode batch
@@ -123,7 +123,7 @@ Full methodology, design decisions, and corrections are in [PAPER.md](PAPER.md).
 ## Layout
 
 ```
-gpu-utilization-mirage/
+gpu-utilization-vs-mfu/
 ├── README.md              # this file
 ├── PAPER.md               # full research write-up
 ├── requirements.txt

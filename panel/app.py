@@ -1,9 +1,9 @@
 """
 panel/app.py
 ------------
-PHASE 4, the "what to build". A mockup of the management-plane surface PaletteAI
-is missing: per-workload MFU and goodput (not just allocation %), a fleet-wide
-efficiency rollup, a dollar-waste leaderboard, and auto-flags with likely cause.
+PHASE 4, the "what to build". A mockup of the management-plane surface most GPU
+platforms are missing: per-workload MFU and goodput (not just allocation %), a
+fleet-wide efficiency rollup, a dollar-waste leaderboard, and auto-flags with cause.
 
 You do NOT ship this. You show what their panel could be.
 
@@ -49,9 +49,9 @@ def likely_cause(mfu_pct, gpu_util_pct, batch_size):
 
 
 def main():
-    st.set_page_config(page_title="PaletteAI: efficiency surface (mockup)", layout="wide")
+    st.set_page_config(page_title="GPU work-efficiency surface (mockup)", layout="wide")
     st.title("Work-efficiency surface")
-    st.caption("Proposed PaletteAI panel mockup. Allocation utilization tells you a GPU is "
+    st.caption("Proposed work-efficiency panel mockup. Allocation utilization tells you a GPU is "
                "busy. This tells you whether it is doing useful work.")
 
     measured = load_measured_mfu()
@@ -98,8 +98,8 @@ def main():
 
     st.divider()
     st.caption("Honest note: MFU is a known metric (PaLM/Karpathy, Trainy). The gap is "
-               "productization. DCGM already ships in the NVIDIA GPU Operator that "
-               "Palette automates; the signal exists, the surface does not.")
+               "productization. DCGM already ships in the NVIDIA GPU Operator these "
+               "platforms build on; the signal exists, the surface does not.")
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ This repository answers that with a small, fully reproducible experiment on a si
 
 `nvidia-smi` GPU-Util reports the fraction of time a kernel is running. It can read ~100% while the GPU performs a fraction of the math it is capable of. **Model FLOPs Utilization (MFU)** — achieved FLOPs over the GPU's peak FLOPs for the precision in use — measures the useful work. The two diverge sharply, and the divergence is driven by configuration (batch size, precision, input pipeline), not by the hardware.
 
-This matters for **PaletteAI** (Spectro Cloud + NVIDIA, launched Oct 2025), whose headline claim is raising GPU utilization "from ~30% to ~60%." That is an *allocation* metric — it measures fewer idle GPUs. The larger, less visible loss is *work-efficiency inside the jobs that are already running*. The raw signal needed to measure it (DCGM SM-active and tensor-pipe-active counters) already ships in the NVIDIA GPU Operator that Palette automates. It is not yet productized into MFU, dollar-attributed waste, or auto-flagged inefficiency.
+This matters across the GPU-platform ecosystem. Many platforms (neoclouds, Kubernetes GPU managers, managed training services) market rising "GPU utilization" — e.g. "from ~30% to ~60%." That is an *allocation* metric — it measures fewer idle GPUs. The larger, less visible loss is *work-efficiency inside the jobs that are already running*. The raw signal needed to measure it (DCGM SM-active and tensor-pipe-active counters) already ships in the NVIDIA GPU Operator that these platforms build on. It is rarely productized into MFU, dollar-attributed waste, or auto-flagged inefficiency.
 
 **This is product insight, not a novel result.** MFU is established (Google PaLM, Karpathy's nanoGPT) and the "GPU utilization is misleading" point has been made before ([Trainy](https://www.trainy.ai/blog/gpu-utilization-misleading)). The contribution here is (a) a clean, honest, reproducible measurement of the gap, and (b) a concrete proposal for the management-plane surface that would expose it.
 
@@ -72,7 +72,7 @@ python measure/sweep.py --mode dataloader    # input starvation
 # Phase 3 — translate to dollars (edit jobs with your measured MFU)
 python analysis/dollar_model.py
 
-# Phase 4 — the proposed PaletteAI surface (local, not Colab)
+# Phase 4 — the proposed work-efficiency surface (local, not Colab)
 streamlit run panel/app.py
 
 # DCGM middle rung — on a VM you control, two terminals:
@@ -118,7 +118,7 @@ Full methodology, design decisions, and corrections are in [PAPER.md](PAPER.md).
 
 - **MFU** — Chowdhery et al., *PaLM* (2022); Karpathy, *nanoGPT* `estimate_mfu`.
 - **"GPU utilization is misleading"** — Trainy; Modal; multiple SM-efficiency write-ups.
-- **Allocation-side GPU sharing** — NVIDIA Run:ai / KAI Scheduler (fractional GPU, SLA-aware), Gandiva, Tiresias, Gavel. This is the layer PaletteAI's 30%→60% number lives in; this repo deliberately addresses the *work-efficiency* layer below it.
+- **Allocation-side GPU sharing** — NVIDIA Run:ai / KAI Scheduler (fractional GPU, SLA-aware), Gandiva, Tiresias, Gavel. This is the allocation layer that "GPU utilization" dashboards report; this repo deliberately addresses the *work-efficiency* layer below it.
 
 ## Layout
 
@@ -137,7 +137,7 @@ gpu-utilization-mirage/
 ├── analysis/
 │   └── dollar_model.py     # headroom vs recoverable waste
 ├── panel/
-│   └── app.py              # proposed PaletteAI work-efficiency surface (Streamlit)
+│   └── app.py              # proposed work-efficiency surface for GPU platforms (Streamlit)
 └── assets/                 # generated charts + json (after you run)
 ```
 

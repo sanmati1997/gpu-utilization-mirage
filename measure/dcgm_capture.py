@@ -1,8 +1,8 @@
 """
 dcgm_capture.py
 ---------------
-The MIDDLE RUNG of the ladder, captured with the exact tool PaletteAI already
-ships (DCGM is bundled in the NVIDIA GPU Operator, which Palette automates).
+The MIDDLE RUNG of the ladder, captured with DCGM — the exact tool most GPU
+platforms already ship (it is bundled in the NVIDIA GPU Operator they build on).
 This is the "the signal is already in your stack" proof.
 
 IMPORTANT: run this on a host where you control the OS (a rented A10/L4/A100 VM

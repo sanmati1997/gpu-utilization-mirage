@@ -9,7 +9,7 @@ sawalwade.s@northeastern.edu · [github.com/sanmati1997](https://github.com/sanm
 
 ## Abstract
 
-Enterprise AI infrastructure platforms increasingly market "GPU utilization" as a headline efficiency metric. We show, with a small reproducible experiment on a single GPU, that the commonly reported utilization signal (`nvidia-smi` GPU-Util) measures only whether a kernel is executing and systematically overstates how much useful computation a GPU performs. Using Model FLOPs Utilization (MFU) as the reference for useful work, we demonstrate that the two metrics diverge substantially and that the divergence is governed by configuration — batch size, numeric precision, and the input pipeline — rather than by the hardware. We connect this to PaletteAI (Spectro Cloud + NVIDIA, October 2025), whose stated achievement is raising GPU utilization from roughly 30% to 60%: an *allocation* improvement (fewer idle GPUs) that is orthogonal to *work-efficiency* inside running jobs. The raw counters required to measure work-efficiency (NVIDIA DCGM SM-active and tensor-pipe-active) already ship in the GPU Operator that Palette automates, but are not surfaced as MFU, dollar-attributed waste, or auto-flagged inefficiency. We contribute (1) a clean, honest, reproducible measurement of the metric gap and (2) a concrete proposal and working mockup for the management-plane surface that would expose it. We are explicit that MFU and the "utilization is misleading" observation are established; the contribution is the measurement discipline and the product framing.
+Enterprise AI infrastructure platforms increasingly market "GPU utilization" as a headline efficiency metric. We show, with a small reproducible experiment on a single GPU, that the commonly reported utilization signal (`nvidia-smi` GPU-Util) measures only whether a kernel is executing and systematically overstates how much useful computation a GPU performs. Using Model FLOPs Utilization (MFU) as the reference for useful work, we demonstrate that the two metrics diverge substantially and that the divergence is governed by configuration — batch size, numeric precision, and the input pipeline — rather than by the hardware. This matters for the broad class of GPU platforms built on NVIDIA's GPU Operator, which surface DCGM's metrics: a headline "GPU utilization" gain is typically an *allocation* improvement (fewer idle GPUs), orthogonal to *work-efficiency* inside running jobs. The raw counters required to measure work-efficiency (NVIDIA DCGM SM-active and tensor-pipe-active) already ship in the GPU Operator these platforms build on, but are rarely surfaced as MFU, dollar-attributed waste, or auto-flagged inefficiency. We contribute (1) a clean, honest, reproducible measurement of the metric gap and (2) a concrete proposal and working mockup for the management-plane surface that would expose it. We are explicit that MFU and the "utilization is misleading" observation are established; the contribution is the measurement discipline and the product framing.
 
 ---
 
@@ -21,7 +21,7 @@ That promise depends entirely on what "utilization" measures. The metric almost 
 
 This paper asks a deliberately narrow question: **when a platform reports rising GPU utilization, does that track the useful work performed?** We answer it empirically and then translate the answer into a product recommendation.
 
-Our motivating system is **PaletteAI**, launched by Spectro Cloud with NVIDIA in October 2025. Its headline claim, attributed to CEO Tenry Fu, is that enterprises typically run GPUs at about 30% utilization and that PaletteAI raises this to about 60%. We take this claim at face value and argue it is *additive* to, not contradicted by, the work-efficiency story: the 30%→60% figure is about reducing idle and hoarded GPUs (an allocation/scheduling win), whereas the efficiency of the jobs that *are* running is a separate axis that the headline metric does not capture.
+The motivating context is the wave of GPU platforms — neoclouds, Kubernetes GPU managers, and managed training services — that market rising "GPU utilization" as a measure of value. A representative claim is moving utilization from roughly 30% to 60%. We take such claims at face value and argue they are *additive* to, not contradicted by, the work-efficiency story: a 30%→60% figure is about reducing idle and hoarded GPUs (an allocation/scheduling win), whereas the efficiency of the jobs that *are* running is a separate axis the headline metric does not capture.
 
 ## 2. Background
 
@@ -36,7 +36,7 @@ NVIDIA's Data Center GPU Manager (DCGM) exposes profiling fields that are closer
 - `DCGM_FI_PROF_SM_ACTIVE` — fraction of time at least one warp is resident on an SM. Better than GPU-Util, but still forgiving: one resident warp suffices.
 - `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` — fraction of cycles the tensor pipe is active. For matmul-bound training and inference, this is the sharpest readily available "is it doing the real work" signal.
 
-DCGM ships in the NVIDIA GPU Operator. Palette automates that operator, so this signal is already collected in PaletteAI deployments.
+DCGM ships in the NVIDIA GPU Operator. Any platform that automates that operator is already collecting this signal.
 
 ### 2.3 Model FLOPs Utilization (MFU)
 
@@ -113,9 +113,9 @@ Four decisions materially affect correctness and are recorded here because getti
 
 ## 6. Discussion: the product gap
 
-PaletteAI optimizes and reports the allocation layer. The work-efficiency layer is:
+Platforms in this space optimize and report the allocation layer. The work-efficiency layer is:
 
-- **Measurable today** from the DCGM signal Palette already collects;
+- **Measurable today** from the DCGM signal the GPU Operator already collects;
 - **Invisible** in the current headline metric, which is allocation utilization;
 - **Material**, because a job can be allocated and "100% utilized" while doing a fraction of useful work.
 
@@ -123,7 +123,7 @@ The proposed surface (mocked in `panel/app.py`) turns the existing signal into: 
 
 ## 7. Threats to validity
 
-Single GPU and synthetic data make results directional, not a production benchmark. MFU depends on a correct FLOP model and a correct dense, precision-matched peak; both are addressed in §4 but should be re-verified per card. DCGM counters require root and the host engine. AMP mixes precisions; MFU is computed against the matmul peak. The framing assumes the allocation-side gains PaletteAI reports are real and independent of work-efficiency, which is consistent with how its 30%→60% claim is described.
+Single GPU and synthetic data make results directional, not a production benchmark. MFU depends on a correct FLOP model and a correct dense, precision-matched peak; both are addressed in §4 but should be re-verified per card. DCGM counters require root and the host engine. AMP mixes precisions; MFU is computed against the matmul peak. The framing assumes the allocation-side gains these platforms report are real and independent of work-efficiency, which is consistent with how such 30%→60% claims are typically described.
 
 ## 8. Related work
 

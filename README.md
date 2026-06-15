@@ -4,6 +4,8 @@
 
 [Research write-up](PAPER.md) · [Reproduce on a free Colab T4](#reproduce) · Built by [Sanmati Sawalwade](https://linkedin.com/in/sanmati-sawalwade)
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sanmati1997/gpu-utilization-mirage/blob/main/notebooks/gpu_utilization_mirage.ipynb)
+
 ---
 
 ## Research question
@@ -20,9 +22,19 @@ This matters for **PaletteAI** (Spectro Cloud + NVIDIA, launched Oct 2025), whos
 
 **This is product insight, not a novel result.** MFU is established (Google PaLM, Karpathy's nanoGPT) and the "GPU utilization is misleading" point has been made before ([Trainy](https://www.trainy.ai/blog/gpu-utilization-misleading)). The contribution here is (a) a clean, honest, reproducible measurement of the gap, and (b) a concrete proposal for the management-plane surface that would expose it.
 
-## The headline result
+## Findings (Tesla T4 reference run)
 
-> Numbers are populated by running `measure/train_loop.py` on your own GPU. The repository ships the method and the code; it does not ship fabricated measurements. Run it, and paste your numbers and `assets/headline_divergence.png` here.
+Three results. The memory-bound figure is exact; the training-MFU absolutes are from one T4 run (reproduce with the [notebook](notebooks/gpu_utilization_mirage.ipynb)), and the **ratio — how much MFU moves — is the robust takeaway**, independent of any single peak-FLOPs choice.
+
+**1. The metric gap is real (microbenchmark).** A memory-bound elementwise op: **100% GPU-Util, 0.1% MFU.** The dashboard reads "maxed out"; the GPU does almost no useful math.
+
+**2. A real GPT training step (not a synthetic matmul).** At batch 8 on a T4: **GPU-Util ~96% while MFU was ~12%.** It looks busy while doing roughly an eighth of its useful work.
+
+**3. The gap is fixable by config, not hardware.** Scaling batch size from 1 to 48 lifted MFU **~8×** (≈2% → ≈16%) on the same GPU — GPU-Util sat near 100% the entire time.
+
+A **roofline** (in the notebook) shows the microbenchmark gap is *principled*, not a fluke: the memory-bound op sits on the bandwidth roof, the big matmul right of the ridge. GPU-Util can't tell you which side of the ridge you're on; the roofline can.
+
+> Honesty notes: MFU is computed against the **dense, precision-matched** peak using **non-embedding** parameter count (token/position embeddings excluded — they do no matmul, and counting them inflates MFU ~1.24× for this config). The "8×" uses batch=1 as the floor (an extreme baseline; it illustrates the shape — small effective batches are common with large models or tight memory). Absolute MFU varies by GPU and run; reproduce via the notebook.
 
 | Metric | What it measures | Typical reading |
 | --- | --- | --- |
@@ -42,7 +54,9 @@ A job that holds a full GPU at "100% utilization" but runs at low MFU is paying 
 
 ## Reproduce
 
-The headline (GPU-Util vs MFU) runs on a **free Colab T4**. The DCGM middle rung needs a host where you are root (a rented A10/L4/A100 VM).
+**Fastest path — one click:** open [`notebooks/gpu_utilization_mirage.ipynb`](notebooks/gpu_utilization_mirage.ipynb) in Colab (badge at top), set runtime to GPU (free T4), run top to bottom (~15 min). It covers the microbenchmarks, the roofline, the real GPT training step, and the batch-size sweep, and saves the charts.
+
+The scripts below are the same logic as standalone CLIs. The headline (GPU-Util vs MFU) runs on a **free Colab T4**. The DCGM middle rung needs a host where you are root (a rented A10/L4/A100 VM).
 
 ```bash
 pip install -r requirements.txt
@@ -113,6 +127,8 @@ gpu-utilization-mirage/
 ├── README.md              # this file
 ├── PAPER.md               # full research write-up
 ├── requirements.txt
+├── notebooks/
+│   └── gpu_utilization_mirage.ipynb  # one-click Colab: micro + roofline + real GPT + batch sweep
 ├── measure/
 │   ├── gpu_peaks.py        # verified dense peak-FLOPS table (the MFU denominator)
 │   ├── train_loop.py       # workload + GPU-Util sampler + MFU + headline chart

@@ -4,7 +4,7 @@
 
 [Research write-up](PAPER.md) · [Reproduce on a free Colab T4](#reproduce) · Built by [Sanmati Sawalwade](https://linkedin.com/in/sanmati-sawalwade)
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/sanmati1997/gpu-utilization-vs-mfu/blob/main/notebooks/gpu_utilization_mirage.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1Y9E2il-koBSv6Nl-C1Rp1TBfa7CIVVSh)
 
 ---
 
@@ -16,9 +16,9 @@ This repository answers that with a small, fully reproducible experiment on a si
 
 ## TL;DR
 
-`nvidia-smi` GPU-Util reports the fraction of time a kernel is running. It can read ~100% while the GPU performs a fraction of the math it is capable of. **Model FLOPs Utilization (MFU)** — achieved FLOPs over the GPU's peak FLOPs for the precision in use — measures the useful work. The two diverge sharply, and the divergence is driven by configuration (batch size, precision, input pipeline), not by the hardware.
+`nvidia-smi` GPU-Util reports the fraction of time a kernel is running. It can read ~100% while the GPU performs a fraction of the math it is capable of. **Model FLOPs Utilization (MFU)** - achieved FLOPs over the GPU's peak FLOPs for the precision in use - measures the useful work. The two diverge sharply, and the divergence is driven by configuration (batch size, precision, input pipeline), not by the hardware.
 
-This matters across the GPU-platform ecosystem. Many platforms (neoclouds, Kubernetes GPU managers, managed training services) market rising "GPU utilization" — e.g. "from ~30% to ~60%." That is an *allocation* metric — it measures fewer idle GPUs. The larger, less visible loss is *work-efficiency inside the jobs that are already running*. The raw signal needed to measure it (DCGM SM-active and tensor-pipe-active counters) already ships in the NVIDIA GPU Operator that these platforms build on. It is rarely productized into MFU, dollar-attributed waste, or auto-flagged inefficiency.
+This matters across the GPU-platform ecosystem. Many platforms (neoclouds, Kubernetes GPU managers, managed training services) market rising "GPU utilization" - e.g. "from ~30% to ~60%." That is an *allocation* metric - it measures fewer idle GPUs. The larger, less visible loss is *work-efficiency inside the jobs that are already running*. The raw signal needed to measure it (DCGM SM-active and tensor-pipe-active counters) already ships in the NVIDIA GPU Operator that these platforms build on. It is rarely productized into MFU, dollar-attributed waste, or auto-flagged inefficiency.
 
 **This is product insight, not a novel result.** MFU is established (Google PaLM, Karpathy's nanoGPT) and the "GPU utilization is misleading" point has been made before ([Trainy](https://www.trainy.ai/blog/gpu-utilization-misleading)). The contribution here is (a) a clean, honest, reproducible measurement of the gap, and (b) a concrete proposal for the management-plane surface that would expose it.
 
@@ -30,11 +30,11 @@ Three results, measured on a Tesla T4 (reproduce with the [notebook](notebooks/g
 
 **2. A real GPT training step (not a synthetic matmul).** At batch 8 on a T4: **GPU-Util 97% while MFU was ~12%.** It looks busy while doing roughly an eighth of its useful work.
 
-**3. MFU is mostly a config story, not a hardware one.** On the same GPU and model, MFU ranged from **~2% at batch 1 → ~12% at batch 8 → ~17% at batch 48** — only the batch size changed. GPU-Util sat near 100% across the upper range. (fp16 was also 2.6× faster per step than fp32 — but that's a *throughput* win; comparing MFU across precisions is apples-to-oranges since each is vs a different peak.)
+**3. MFU is mostly a config story, not a hardware one.** On the same GPU and model, MFU ranged from **~2% at batch 1 → ~12% at batch 8 → ~17% at batch 48** - only the batch size changed. GPU-Util sat near 100% across the upper range. (fp16 was also 2.6× faster per step than fp32 - but that's a *throughput* win; comparing MFU across precisions is apples-to-oranges since each is vs a different peak.)
 
 A **roofline** (in the notebook) shows the microbenchmark gap is *principled*, not a fluke: the memory-bound op sits on the bandwidth roof, the big matmul right of the ridge. GPU-Util can't tell you which side of the ridge you're on; the roofline can.
 
-> Honesty notes: MFU is computed against the **dense, precision-matched** peak using **non-embedding** parameter count (token/position embeddings are lookups doing no matmul — counting them inflates MFU ~1.24× for this config). Batch is reported as a curve rather than a single headline multiplier; the batch-8 case (a normal config) is the point, not the batch-1 floor. Absolute MFU varies by GPU and run; reproduce via the notebook.
+> Honesty notes: MFU is computed against the **dense, precision-matched** peak using **non-embedding** parameter count (token/position embeddings are lookups doing no matmul - counting them inflates MFU ~1.24× for this config). Batch is reported as a curve rather than a single headline multiplier; the batch-8 case (a normal config) is the point, not the batch-1 floor. Absolute MFU varies by GPU and run; reproduce via the notebook.
 
 | Metric | What it measures | Typical reading |
 | --- | --- | --- |
@@ -47,48 +47,37 @@ A **roofline** (in the notebook) shows the microbenchmark gap is *principled*, n
 
 A job that holds a full GPU at "100% utilization" but runs at low MFU is paying for compute it does not use. The cost model in [`analysis/dollar_model.py`](analysis/dollar_model.py) reports two figures, deliberately:
 
-- `headroom_vs_peak` — gap to the theoretical ceiling. Aspirational, not reclaimable.
-- `recoverable` — the same work retuned to an achievable MFU target (default 45%, near PaLM's reported 46%). **This is the defensible number.** Lead with it.
+- `headroom_vs_peak` - gap to the theoretical ceiling. Aspirational, not reclaimable.
+- `recoverable` - the same work retuned to an achievable MFU target (default 45%, near PaLM's reported 46%). **This is the defensible number.** Lead with it.
 
 ---
 
 ## Reproduce
 
-**Fastest path — one click:** open [`notebooks/gpu_utilization_mirage.ipynb`](notebooks/gpu_utilization_mirage.ipynb) in Colab (badge at top), set runtime to GPU (free T4), run top to bottom (~15 min). It covers the microbenchmarks, the roofline, the real GPT training step, and the batch-size sweep, and saves the charts.
+**Fastest path, one click:** open the [Colab notebook](https://colab.research.google.com/drive/1Y9E2il-koBSv6Nl-C1Rp1TBfa7CIVVSh), set runtime to GPU (free T4), run top to bottom (~15 min). It covers the microbenchmarks, the roofline, the real GPT training step, and the batch-size sweep, and saves the charts. (The same notebook is versioned at [`notebooks/gpu_utilization_mirage.ipynb`](notebooks/gpu_utilization_mirage.ipynb).)
 
 The scripts below are the same logic as standalone CLIs. The headline (GPU-Util vs MFU) runs on a **free Colab T4**. The DCGM middle rung needs a host where you are root (a rented A10/L4/A100 VM).
 
 ```bash
 pip install -r requirements.txt
 
-# Phase 1 — the headline finding (GPU-Util vs MFU), free Colab T4
+# Phase 1 - the headline finding (GPU-Util vs MFU), free Colab T4
 python measure/train_loop.py --steps 200 --batch-size 8 --seq-len 256
 
-# Phase 2 — prove the gap is fixable by configuration, not hardware
+# Phase 2 - prove the gap is fixable by configuration, not hardware
 python measure/sweep.py --mode batch        # batch size is the #1 lever
 python measure/sweep.py --mode precision     # fp16/bf16 vs fp32
 python measure/sweep.py --mode dataloader    # input starvation
 
-# Phase 3 — translate to dollars (edit jobs with your measured MFU)
+# Phase 3 - translate to dollars (edit jobs with your measured MFU)
 python analysis/dollar_model.py
 
-# Phase 4 — the proposed work-efficiency surface (local, not Colab)
+# Phase 4 - the proposed work-efficiency surface (local, not Colab)
 streamlit run panel/app.py
 
-# DCGM middle rung — on a VM you control, two terminals:
+# DCGM middle rung - on a VM you control, two terminals:
 #   A: python measure/train_loop.py --steps 100000 --batch-size 8
 #   B: python measure/dcgm_capture.py --seconds 20
-```
-
-### Colab quickstart
-
-```python
-!nvidia-smi -L
-!git clone https://github.com/sanmati1997/gpu-utilization-vs-mfu
-%cd gpu-utilization-vs-mfu
-!pip -q install -r requirements.txt
-!python measure/train_loop.py --steps 200 --batch-size 8
-!python measure/sweep.py --mode batch
 ```
 
 ---
@@ -110,15 +99,15 @@ Full methodology, design decisions, and corrections are in [PAPER.md](PAPER.md).
 
 - **MFU denominator must match training precision and be the dense (non-sparsity) peak.** Dividing fp16 throughput by an fp32 peak, or by a 2:4-sparsity peak, produces large errors. `gpu_peaks.py` stores verified dense peaks and refuses unknown GPU/precision pairs.
 - **Weight tying.** The model ties the token embedding and output head (GPT-2 standard). Without it, the token-embedding lookup is falsely counted as matmul work and inflates MFU by ~1.6× for this config.
-- **DCGM profiling counters need the host engine and usually root** — they do not run on stock Colab, which is why the headline is intentionally DCGM-free.
+- **DCGM profiling counters need the host engine and usually root** - they do not run on stock Colab, which is why the headline is intentionally DCGM-free.
 - **Single GPU, synthetic data.** Results are directional and meant to demonstrate the metric gap, not to benchmark any specific production workload.
 - **AMP mixed precision** runs matmuls at fp16/bf16 and some ops at fp32; MFU is computed against the tensor (matmul) peak, since matmuls dominate FLOPs.
 
 ## Related work / prior art (honest)
 
-- **MFU** — Chowdhery et al., *PaLM* (2022); Karpathy, *nanoGPT* `estimate_mfu`.
-- **"GPU utilization is misleading"** — Trainy; Modal; multiple SM-efficiency write-ups.
-- **Allocation-side GPU sharing** — NVIDIA Run:ai / KAI Scheduler (fractional GPU, SLA-aware), Gandiva, Tiresias, Gavel. This is the allocation layer that "GPU utilization" dashboards report; this repo deliberately addresses the *work-efficiency* layer below it.
+- **MFU** - Chowdhery et al., *PaLM* (2022); Karpathy, *nanoGPT* `estimate_mfu`.
+- **"GPU utilization is misleading"** - Trainy; Modal; multiple SM-efficiency write-ups.
+- **Allocation-side GPU sharing** - NVIDIA Run:ai / KAI Scheduler (fractional GPU, SLA-aware), Gandiva, Tiresias, Gavel. This is the allocation layer that "GPU utilization" dashboards report; this repo deliberately addresses the *work-efficiency* layer below it.
 
 ## Layout
 
@@ -143,5 +132,5 @@ gpu-utilization-vs-mfu/
 
 ---
 
-Built by [Sanmati Sawalwade](https://linkedin.com/in/sanmati-sawalwade) — MS Information Systems, Northeastern University (Silicon Valley)
+Built by [Sanmati Sawalwade](https://linkedin.com/in/sanmati-sawalwade) - MS Information Systems, Northeastern University (Silicon Valley)
 sawalwade.s@northeastern.edu · [sanmati1997.github.io](https://sanmati1997.github.io)

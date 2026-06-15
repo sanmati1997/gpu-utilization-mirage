@@ -1,7 +1,7 @@
 """
 dcgm_capture.py
 ---------------
-The MIDDLE RUNG of the ladder, captured with DCGM — the exact tool most GPU
+The MIDDLE RUNG of the ladder, captured with DCGM - the exact tool most GPU
 platforms already ship (it is bundled in the NVIDIA GPU Operator they build on).
 This is the "the signal is already in your stack" proof.
 

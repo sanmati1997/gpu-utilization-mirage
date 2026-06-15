@@ -9,7 +9,7 @@ sawalwade.s@northeastern.edu · [github.com/sanmati1997](https://github.com/sanm
 
 ## Abstract
 
-Enterprise AI infrastructure platforms increasingly market "GPU utilization" as a headline efficiency metric. We show, with a small reproducible experiment on a single GPU, that the commonly reported utilization signal (`nvidia-smi` GPU-Util) measures only whether a kernel is executing and systematically overstates how much useful computation a GPU performs. Using Model FLOPs Utilization (MFU) as the reference for useful work, we demonstrate that the two metrics diverge substantially and that the divergence is governed by configuration — batch size, numeric precision, and the input pipeline — rather than by the hardware. This matters for the broad class of GPU platforms built on NVIDIA's GPU Operator, which surface DCGM's metrics: a headline "GPU utilization" gain is typically an *allocation* improvement (fewer idle GPUs), orthogonal to *work-efficiency* inside running jobs. The raw counters required to measure work-efficiency (NVIDIA DCGM SM-active and tensor-pipe-active) already ship in the GPU Operator these platforms build on, but are rarely surfaced as MFU, dollar-attributed waste, or auto-flagged inefficiency. We contribute (1) a clean, honest, reproducible measurement of the metric gap and (2) a concrete proposal and working mockup for the management-plane surface that would expose it. We are explicit that MFU and the "utilization is misleading" observation are established; the contribution is the measurement discipline and the product framing.
+Enterprise AI infrastructure platforms increasingly market "GPU utilization" as a headline efficiency metric. We show, with a small reproducible experiment on a single GPU, that the commonly reported utilization signal (`nvidia-smi` GPU-Util) measures only whether a kernel is executing and systematically overstates how much useful computation a GPU performs. Using Model FLOPs Utilization (MFU) as the reference for useful work, we demonstrate that the two metrics diverge substantially and that the divergence is governed by configuration - batch size, numeric precision, and the input pipeline - rather than by the hardware. This matters for the broad class of GPU platforms built on NVIDIA's GPU Operator, which surface DCGM's metrics: a headline "GPU utilization" gain is typically an *allocation* improvement (fewer idle GPUs), orthogonal to *work-efficiency* inside running jobs. The raw counters required to measure work-efficiency (NVIDIA DCGM SM-active and tensor-pipe-active) already ship in the GPU Operator these platforms build on, but are rarely surfaced as MFU, dollar-attributed waste, or auto-flagged inefficiency. We contribute (1) a clean, honest, reproducible measurement of the metric gap and (2) a concrete proposal and working mockup for the management-plane surface that would expose it. We are explicit that MFU and the "utilization is misleading" observation are established; the contribution is the measurement discipline and the product framing.
 
 ---
 
@@ -17,11 +17,11 @@ Enterprise AI infrastructure platforms increasingly market "GPU utilization" as 
 
 GPUs are the scarcest and most expensive resource in modern AI infrastructure. It is therefore natural that platform vendors quantify their value in terms of "GPU utilization." The implicit promise is that higher utilization means more useful work per dollar of hardware.
 
-That promise depends entirely on what "utilization" measures. The metric almost universally reported — `nvidia-smi`'s GPU-Util — is defined by NVIDIA as the fraction of time over the past sampling window during which at least one kernel was executing. It says nothing about whether that kernel saturated the compute units, used the tensor cores, or stalled waiting for data. A kernel that occupies the GPU while doing a small amount of arithmetic registers as fully utilized.
+That promise depends entirely on what "utilization" measures. The metric almost universally reported - `nvidia-smi`'s GPU-Util - is defined by NVIDIA as the fraction of time over the past sampling window during which at least one kernel was executing. It says nothing about whether that kernel saturated the compute units, used the tensor cores, or stalled waiting for data. A kernel that occupies the GPU while doing a small amount of arithmetic registers as fully utilized.
 
 This paper asks a deliberately narrow question: **when a platform reports rising GPU utilization, does that track the useful work performed?** We answer it empirically and then translate the answer into a product recommendation.
 
-The motivating context is the wave of GPU platforms — neoclouds, Kubernetes GPU managers, and managed training services — that market rising "GPU utilization" as a measure of value. A representative claim is moving utilization from roughly 30% to 60%. We take such claims at face value and argue they are *additive* to, not contradicted by, the work-efficiency story: a 30%→60% figure is about reducing idle and hoarded GPUs (an allocation/scheduling win), whereas the efficiency of the jobs that *are* running is a separate axis the headline metric does not capture.
+The motivating context is the wave of GPU platforms - neoclouds, Kubernetes GPU managers, and managed training services - that market rising "GPU utilization" as a measure of value. A representative claim is moving utilization from roughly 30% to 60%. We take such claims at face value and argue they are *additive* to, not contradicted by, the work-efficiency story: a 30%→60% figure is about reducing idle and hoarded GPUs (an allocation/scheduling win), whereas the efficiency of the jobs that *are* running is a separate axis the headline metric does not capture.
 
 ## 2. Background
 
@@ -33,8 +33,8 @@ The motivating context is the wave of GPU platforms — neoclouds, Kubernetes GP
 
 NVIDIA's Data Center GPU Manager (DCGM) exposes profiling fields that are closer to the truth:
 
-- `DCGM_FI_PROF_SM_ACTIVE` — fraction of time at least one warp is resident on an SM. Better than GPU-Util, but still forgiving: one resident warp suffices.
-- `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` — fraction of cycles the tensor pipe is active. For matmul-bound training and inference, this is the sharpest readily available "is it doing the real work" signal.
+- `DCGM_FI_PROF_SM_ACTIVE` - fraction of time at least one warp is resident on an SM. Better than GPU-Util, but still forgiving: one resident warp suffices.
+- `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` - fraction of cycles the tensor pipe is active. For matmul-bound training and inference, this is the sharpest readily available "is it doing the real work" signal.
 
 DCGM ships in the NVIDIA GPU Operator. Any platform that automates that operator is already collecting this signal.
 
@@ -46,7 +46,7 @@ MFU, introduced in Google's PaLM report and popularized by Karpathy's nanoGPT, i
 MFU = achieved_FLOPs_per_second / peak_FLOPs_per_second
 ```
 
-It is hardware-grounded and precision-aware. Well-optimized large-model training typically lands around 35–50% MFU (PaLM reported 46.2%). MFU requires knowing the model's FLOPs per token, which is why it is not a drop-in counter — but for a known architecture it is straightforward to compute.
+It is hardware-grounded and precision-aware. Well-optimized large-model training typically lands around 35-50% MFU (PaLM reported 46.2%). MFU requires knowing the model's FLOPs per token, which is why it is not a drop-in counter - but for a known architecture it is straightforward to compute.
 
 ## 3. Method
 
@@ -79,8 +79,8 @@ To establish that the gap is a *configuration* property and therefore actionable
 
 We convert MFU into money with two clearly separated figures:
 
-- `headroom_vs_peak = spend × (1 − MFU)` — the gap to the theoretical ceiling. Reported for context only; it is not reclaimable because no real job reaches 100% MFU.
-- `recoverable = spend × max(0, 1 − MFU / MFU_target)` — the same work retuned to an achievable target (default 45%), finishing in `MFU / MFU_target` of the time. This is the defensible number and the one we lead with.
+- `headroom_vs_peak = spend × (1 − MFU)` - the gap to the theoretical ceiling. Reported for context only; it is not reclaimable because no real job reaches 100% MFU.
+- `recoverable = spend × max(0, 1 − MFU / MFU_target)` - the same work retuned to an achievable target (default 45%), finishing in `MFU / MFU_target` of the time. This is the defensible number and the one we lead with.
 
 ## 4. Methodological corrections
 
@@ -88,11 +88,11 @@ Four decisions materially affect correctness and are recorded here because getti
 
 1. **Precision-matched, dense denominator.** MFU must divide by the peak for the precision in use. NVIDIA datasheets typically headline the 2:4-sparsity peak; the correct denominator for dense training is half that. `gpu_peaks.py` stores verified dense peaks (e.g., L4 fp16 = 121 TFLOPS, not the datasheet's 242) and raises on unknown GPU/precision pairs rather than guessing.
 
-2. **Weight tying.** The token embedding and output head share one matrix (GPT-2 standard). Untied, the token-embedding lookup — which performs essentially no FLOPs — is counted as matmul work under the `6N` convention, inflating MFU by ~1.6× for this configuration (N would be 49M instead of the correct 30M). Tying restores honest accounting.
+2. **Weight tying.** The token embedding and output head share one matrix (GPT-2 standard). Untied, the token-embedding lookup - which performs essentially no FLOPs - is counted as matmul work under the `6N` convention, inflating MFU by ~1.6× for this configuration (N would be 49M instead of the correct 30M). Tying restores honest accounting.
 
 3. **bf16 only on Ampere and later.** Turing (T4) has no native bf16 tensor cores; the code auto-selects fp16 on T4 and bf16 on Ampere+ by compute capability.
 
-4. **`(1 − MFU)` overstates recoverable waste.** Because achievable MFU is ~35–50%, the headroom-to-peak figure is aspirational. The cost model reports recoverable separately and leads with it.
+4. **`(1 − MFU)` overstates recoverable waste.** Because achievable MFU is ~35-50%, the headroom-to-peak figure is aspirational. The cost model reports recoverable separately and leads with it.
 
 ## 5. Results
 
@@ -131,7 +131,7 @@ MFU: PaLM (Chowdhery et al., 2022); nanoGPT (Karpathy). "GPU utilization is misl
 
 ## 9. Conclusion
 
-"GPU utilization," as commonly reported, is a mirage: it tracks occupancy, not useful work, and the two diverge in ways that are fixable through configuration. For an AI infrastructure platform, the opportunity is not a new capability but a new surface — turning already-collected DCGM signal into MFU, dollar-attributed waste, and actionable flags, and reframing the headline metric accordingly. The measurement is small and reproducible; the framing is, we argue, the valuable part.
+"GPU utilization," as commonly reported, is a mirage: it tracks occupancy, not useful work, and the two diverge in ways that are fixable through configuration. For an AI infrastructure platform, the opportunity is not a new capability but a new surface - turning already-collected DCGM signal into MFU, dollar-attributed waste, and actionable flags, and reframing the headline metric accordingly. The measurement is small and reproducible; the framing is, we argue, the valuable part.
 
 ---
 
@@ -141,5 +141,5 @@ All code, the verified peak table, and the cost model are in this repository. Se
 
 ## Author
 
-Sanmati Sawalwade — MS Information Systems, Northeastern University (Silicon Valley)
+Sanmati Sawalwade - MS Information Systems, Northeastern University (Silicon Valley)
 sawalwade.s@northeastern.edu · [linkedin.com/in/sanmati-sawalwade](https://linkedin.com/in/sanmati-sawalwade) · [sanmati1997.github.io](https://sanmati1997.github.io)

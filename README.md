@@ -24,17 +24,17 @@ This matters for **PaletteAI** (Spectro Cloud + NVIDIA, launched Oct 2025), whos
 
 ## Findings (Tesla T4 reference run)
 
-Three results. The memory-bound figure is exact; the training-MFU absolutes are from one T4 run (reproduce with the [notebook](notebooks/gpu_utilization_mirage.ipynb)), and the **ratio — how much MFU moves — is the robust takeaway**, independent of any single peak-FLOPs choice.
+Three results, measured on a Tesla T4 (reproduce with the [notebook](notebooks/gpu_utilization_mirage.ipynb)). The memory-bound figure is exact; the training MFU is from a verified run with embedding-corrected accounting.
 
 **1. The metric gap is real (microbenchmark).** A memory-bound elementwise op: **100% GPU-Util, 0.1% MFU.** The dashboard reads "maxed out"; the GPU does almost no useful math.
 
-**2. A real GPT training step (not a synthetic matmul).** At batch 8 on a T4: **GPU-Util ~96% while MFU was ~12%.** It looks busy while doing roughly an eighth of its useful work.
+**2. A real GPT training step (not a synthetic matmul).** At batch 8 on a T4: **GPU-Util 97% while MFU was ~12%.** It looks busy while doing roughly an eighth of its useful work.
 
-**3. The gap is fixable by config, not hardware.** Scaling batch size from 1 to 48 lifted MFU **~8×** (≈2% → ≈16%) on the same GPU — GPU-Util sat near 100% the entire time.
+**3. MFU is mostly a config story, not a hardware one.** On the same GPU and model, MFU ranged from **~2% at batch 1 → ~12% at batch 8 → ~17% at batch 48** — only the batch size changed. GPU-Util sat near 100% across the upper range. (fp16 was also 2.6× faster per step than fp32 — but that's a *throughput* win; comparing MFU across precisions is apples-to-oranges since each is vs a different peak.)
 
 A **roofline** (in the notebook) shows the microbenchmark gap is *principled*, not a fluke: the memory-bound op sits on the bandwidth roof, the big matmul right of the ridge. GPU-Util can't tell you which side of the ridge you're on; the roofline can.
 
-> Honesty notes: MFU is computed against the **dense, precision-matched** peak using **non-embedding** parameter count (token/position embeddings excluded — they do no matmul, and counting them inflates MFU ~1.24× for this config). The "8×" uses batch=1 as the floor (an extreme baseline; it illustrates the shape — small effective batches are common with large models or tight memory). Absolute MFU varies by GPU and run; reproduce via the notebook.
+> Honesty notes: MFU is computed against the **dense, precision-matched** peak using **non-embedding** parameter count (token/position embeddings are lookups doing no matmul — counting them inflates MFU ~1.24× for this config). Batch is reported as a curve rather than a single headline multiplier; the batch-8 case (a normal config) is the point, not the batch-1 floor. Absolute MFU varies by GPU and run; reproduce via the notebook.
 
 | Metric | What it measures | Typical reading |
 | --- | --- | --- |
